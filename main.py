@@ -69,7 +69,10 @@ def build_argparser():
 
 
 def connect_mqtt():
-    ### TODO: Connect to the MQTT client ###
+    """
+    Connect to the MQTT client
+
+    """
     client = None
 
     return client

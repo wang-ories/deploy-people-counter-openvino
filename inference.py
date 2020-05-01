@@ -134,9 +134,16 @@ class Network:
         return request_waiting
 
     def get_output(self):
-        ### TODO: Extract and return the output results
-        ### Note: You may need to update the function parameters. ###
-        return
+        """
+           Extract and return the output results
+           Note: You may need to update the function parameters.
+       """
+        if output:
+
+            return self.infer_request_handle.outputs[output]
+        else:
+            return self.plugin.requests[request_id].outputs[self.out_blob]
+
 
 
 #cd /opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader
