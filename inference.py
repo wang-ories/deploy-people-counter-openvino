@@ -72,7 +72,9 @@ class Network:
 
         # Read IR
         log.info("Reading IR...")
-        self.net = IENetwork(model=model_xml, weights=model_bin)
+
+
+        self.net = IECore.read_network(model=model_xml, weights=model_bin)
         log.info("Loading IR to the plugin...")
 
         if "CPU" in device:
@@ -124,3 +126,6 @@ class Network:
         ### TODO: Extract and return the output results
         ### Note: You may need to update the function parameters. ###
         return
+
+
+#cd /opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader
