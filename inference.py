@@ -113,11 +113,16 @@ class Network:
         """
         return self.net.inputs[self.input_blob].shape
 
-    def exec_net(self):
-        ### TODO: Start an asynchronous request ###
-        ### TODO: Return any necessary information ###
-        ### Note: You may need to update the function parameters. ###
-        return
+    def exec_net(self, request_id, frame):
+        """
+        Start an asynchronous request
+        Return any necessary information
+        Note: You may need to update the function parameters.
+        """
+        self.infer_request_handle = self.net_plugin.start_async(
+            request_id=request_id, inputs={self.input_blob: frame}
+        )
+        return self.net_plugin
 
     def wait(self):
         ### TODO: Wait for the request to be complete. ###
