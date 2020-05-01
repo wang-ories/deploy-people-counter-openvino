@@ -124,11 +124,14 @@ class Network:
         )
         return self.net_plugin
 
-    def wait(self):
-        ### TODO: Wait for the request to be complete. ###
-        ### TODO: Return any necessary information ###
-        ### Note: You may need to update the function parameters. ###
-        return
+    def wait(self, request_id):
+        """
+            Wait for the request to be complete.
+            Return any necessary information
+            Note: You may need to update the function parameters.
+        """
+        request_waiting = self.net_plugin.requests[request_id].wait(-1)
+        return request_waiting
 
     def get_output(self):
         ### TODO: Extract and return the output results
