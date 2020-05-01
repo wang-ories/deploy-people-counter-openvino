@@ -107,8 +107,11 @@ class Network:
         return self.plugin, self.get_input_shape()
 
     def get_input_shape(self):
-        ### TODO: Return the shape of the input layer ###
-        return
+        """
+        Return the shape of the input layer
+
+        """
+        return self.net.inputs[self.input_blob].shape
 
     def exec_net(self):
         ### TODO: Start an asynchronous request ###
