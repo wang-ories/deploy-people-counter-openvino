@@ -69,11 +69,12 @@ def build_argparser():
 
 
 def connect_mqtt():
-    """
-    Connect to the MQTT client
 
     """
-    client = None
+        Connect to the MQTT client
+    """
+    client = mqtt.Client()
+    client.connect(MQTT_HOST, MQTT_PORT, MQTT_KEEPALIVE_INTERVAL)
 
     return client
 
