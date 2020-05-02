@@ -139,7 +139,6 @@ class Network:
            Note: You may need to update the function parameters.
        """
         if output:
-
             return self.infer_request_handle.outputs[output]
         else:
             return self.plugin.requests[request_id].outputs[self.out_blob]
