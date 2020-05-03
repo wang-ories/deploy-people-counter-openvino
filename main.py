@@ -94,6 +94,11 @@ def infer_on_stream(args, client):
     # Set Probability threshold for detections
     prob_threshold = args.prob_threshold
     request_id = 0
+    total_count = 0
+    last_count = 0
+    current_count = 0
+
+    single_image_mode = False
 
     # Load the model through `infer_network`
     n, c, h, w = infer_network.load_model(args.model, args.device, 1, 1, request_id, args.cpu_extension)[1]
@@ -102,7 +107,9 @@ def infer_on_stream(args, client):
 
     # Check for image input
     if args.input.endswith('.jpg') or args.input.endswith('.bmp') :
+        single_image_mode = True
         input_stream = args.input
+
     else: # input is a video path
         input_stream = args.input
         assert os.path.isfile(args.input), "Specified input file doesn't exist"
@@ -128,30 +135,71 @@ def infer_on_stream(args, client):
 
         key_pressed = cv2.waitKey(60)
         # Pre-process the image as needed
-
-        # Start asynchronous inference for specified request
         image = cv2.resize(frame, (w, h))
         # Change data layout form HWC to CHW
         image = image.transpose((2, 0, 1))
         image = image.reshape((n, c, h, w))
-    
+        # Start asynchronous inference for specified request
+        inf_start = time.time()
 
-        ### TODO: Start asynchronous inference for specified request ###
+        infer_network.exec_net(request_id, image)
+        # Wait for the result
+        if infer_network.wait(request_id) == 0:
+            det_time = time.time() - inf_start
+            # Get the results of the inference request
+            result = infer_network.get_output(cur_request_id)
+            # Extract any desired stats from the results
+            frame, current_count = frame_out(frame, result)
+            # Calculate and send relevant information on
+            if current_count > last_count:
+                start_time = time.time()
+                # current_count, total_count and duration to the MQTT server
+                total_count = total_count + current_count - last_count
+                # Topic "person": keys of "count" and "total" ###
+                client.publish("person", json.dumps({"total": total_count}))
 
-        ### TODO: Wait for the result ###
 
-            ### TODO: Get the results of the inference request ###
+            # Topic "person/duration": key of "duration"
+            if current_count < last_count:
+                duration = int(time.time() - start_time)
+                # Publish messages to the MQTT server
+                client.publish("person/duration",
+                               json.dumps({"duration": duration}))
 
-            ### TODO: Extract any desired stats from the results ###
+            client.publish("person", json.dumps({"count": current_count}))
+            last_count = current_count
+            if key_pressed == 27:
+                break
 
-            ### TODO: Calculate and send relevant information on ###
-            ### current_count, total_count and duration to the MQTT server ###
-            ### Topic "person": keys of "count" and "total" ###
-            ### Topic "person/duration": key of "duration" ###
+        # Send the frame to the FFMPEG server ###
 
-        ### TODO: Send the frame to the FFMPEG server ###
+        sys.stdout.buffer.write(frame)
+        sys.stdout.flush()
 
-        ### TODO: Write an output image if `single_image_mode` ###
+        # Write an output image if `single_image_mode`
+        if single_image_mode:
+            cv2.imwrite('output_image.jpg', frame)
+
+    cap.release()
+    cv2.destroyAllWindows()
+    client.disconnect()
+    infer_network.clean()
+
+def main():
+    """
+    Load the network and parse the output.
+
+    :return: None
+    """
+    # Grab command line args
+    args = build_argparser().parse_args()
+    # Connect to the MQTT server
+    client = connect_mqtt()
+    # Perform inference on the input stream
+    infer_on_stream(args, client)
+
+
+
 
 
 def main():
