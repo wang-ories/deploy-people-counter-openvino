@@ -145,4 +145,3 @@ class Network:
 
 
 
-#cd /opt/intel/openvino/deployment_tools/open_model_zoo/tools/downloader

@@ -90,18 +90,51 @@ def infer_on_stream(args, client):
     """
     # Initialise the class
     infer_network = Network()
+
     # Set Probability threshold for detections
     prob_threshold = args.prob_threshold
+    request_id = 0
 
-    ### TODO: Load the model through `infer_network` ###
+    # Load the model through `infer_network`
+    n, c, h, w = infer_network.load_model(args.model, args.device, 1, 1, request_id, args.cpu_extension)[1]
 
-    ### TODO: Handle the input stream ###
+    # Handle the input stream
 
-    ### TODO: Loop until stream is over ###
+    # Check for image input
+    if args.input.endswith('.jpg') or args.input.endswith('.bmp') :
+        input_stream = args.input
+    else: # input is a video path
+        input_stream = args.input
+        assert os.path.isfile(args.input), "Specified input file doesn't exist"
 
-        ### TODO: Read from the video capture ###
+    cap = cv2.VideoCapture(input_stream)
+    if input_stream:
+        cap.open(args.input)
 
-        ### TODO: Pre-process the image as needed ###
+    if not cap.isOpened():
+        log.error("ERROR! Unable to open video source")
+
+    global initial_w, initial_h
+    initial_w = cap.get(3)
+    initial_h = cap.get(4)
+
+    # Loop until stream is over
+
+    while cap.isOpened():
+        # Read from the video capture
+        flag, frame = cap.read()
+        if not flag:
+            break
+
+        key_pressed = cv2.waitKey(60)
+        # Pre-process the image as needed
+
+        # Start asynchronous inference for specified request
+        image = cv2.resize(frame, (w, h))
+        # Change data layout form HWC to CHW
+        image = image.transpose((2, 0, 1))
+        image = image.reshape((n, c, h, w))
+    
 
         ### TODO: Start asynchronous inference for specified request ###
 
