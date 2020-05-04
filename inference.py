@@ -25,7 +25,8 @@
 import os
 import sys
 import logging as log
-from openvino.inference_engine import IENetwork, IECore
+from openvino.inference_engine import IENetwork
+from openvino.inference_engine import IECore
 
 
 class Network:
@@ -55,8 +56,8 @@ class Network:
             Return the loaded inference plugin
         """
 
-        model_xml = model
-        model_bin = os.path.splitext(model_xml)[0] + ".bin"
+        model_structure=model+'.xml'
+        model_weights=model+ ".bin"
 
         # Plugin initialization for specified device
         # and load extensions library if specified
@@ -73,9 +74,10 @@ class Network:
         # Read IR
         log.info("Reading IR...")
 
-
-        self.net = IECore.read_network(model=model_xml, weights=model_bin)
-        log.info("Loading IR to the plugin...")
+        core = IECore()
+        self.net = core.load_network(model=model_structure, weights=model_weights)
+        l
+        og.info("Loading IR to the plugin...")
 
         if "CPU" in device:
             supported_layers = self.plugin.query_network(self.net, "CPU")
@@ -133,7 +135,7 @@ class Network:
         request_waiting = self.net_plugin.requests[request_id].wait(-1)
         return request_waiting
 
-    def get_output(self):
+    def get_output(self, request_id, output=None):
         """
            Extract and return the output results
            Note: You may need to update the function parameters.

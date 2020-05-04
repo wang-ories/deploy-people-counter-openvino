@@ -19,7 +19,6 @@
  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-
 import os
 import sys
 import time
@@ -64,12 +63,11 @@ def build_argparser():
                              "specified (CPU by default)")
     parser.add_argument("-pt", "--prob_threshold", type=float, default=0.5,
                         help="Probability threshold for detections filtering"
-                        "(0.5 by default)")
+                             "(0.5 by default)")
     return parser
 
 
 def connect_mqtt():
-
     """
         Connect to the MQTT client
     """
@@ -77,6 +75,7 @@ def connect_mqtt():
     client.connect(MQTT_HOST, MQTT_PORT, MQTT_KEEPALIVE_INTERVAL)
 
     return client
+
 
 def frame_out(frame, result):
     """
@@ -94,7 +93,7 @@ def frame_out(frame, result):
             ymin = int(obj[4] * initial_h)
             xmax = int(obj[5] * initial_w)
             ymax = int(obj[6] * initial_h)
-            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 55, 255), 1)
+            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
             current_count = current_count + 1
     return frame, current_count
 
@@ -112,6 +111,8 @@ def infer_on_stream(args, client):
     infer_network = Network()
 
     # Set Probability threshold for detections
+    global initial_w, initial_h, prob_threshold
+
     prob_threshold = args.prob_threshold
     request_id = 0
     total_count = 0
@@ -126,11 +127,11 @@ def infer_on_stream(args, client):
     # Handle the input stream
 
     # Check for image input
-    if args.input.endswith('.jpg') or args.input.endswith('.bmp') :
+    if args.input.endswith('.jpg') or args.input.endswith('.bmp'):
         single_image_mode = True
         input_stream = args.input
 
-    else: # input is a video path
+    else:  # input is a video path
         input_stream = args.input
         assert os.path.isfile(args.input), "Specified input file doesn't exist"
 
@@ -141,7 +142,6 @@ def infer_on_stream(args, client):
     if not cap.isOpened():
         log.error("ERROR! Unable to open video source")
 
-    global initial_w, initial_h
     initial_w = cap.get(3)
     initial_h = cap.get(4)
 
@@ -178,7 +178,6 @@ def infer_on_stream(args, client):
                 # Topic "person": keys of "count" and "total" ###
                 client.publish("person", json.dumps({"total": total_count}))
 
-
             # Topic "person/duration": key of "duration"
             if current_count < last_count:
                 duration = int(time.time() - start_time)
@@ -205,6 +204,7 @@ def infer_on_stream(args, client):
     client.disconnect()
     infer_network.clean()
 
+
 def main():
     """
     Load the network and parse the output.
@@ -217,9 +217,6 @@ def main():
     client = connect_mqtt()
     # Perform inference on the input stream
     infer_on_stream(args, client)
-
-
-
 
 
 def main():
