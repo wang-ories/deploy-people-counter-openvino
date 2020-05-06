@@ -1,3 +1,4 @@
+
 """People Counter."""
 """
  Copyright (c) 2018 Intel Corporation.
@@ -18,6 +19,7 @@
  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+
 
 import os
 import sys
@@ -77,6 +79,7 @@ def connect_mqtt():
     return client
 
 
+#
 def frame_out(frame, result):
     """
     Parse SSD output.
@@ -97,7 +100,6 @@ def frame_out(frame, result):
             current_count = current_count + 1
     return frame, current_count
 
-
 def infer_on_stream(args, client):
     """
     Initialize the inference network, stream video to network,
@@ -111,8 +113,7 @@ def infer_on_stream(args, client):
     infer_network = Network()
 
     # Set Probability threshold for detections
-    global initial_w, initial_h, prob_threshold
-
+    global prob_threshold
     prob_threshold = args.prob_threshold
     request_id = 0
     total_count = 0
@@ -127,11 +128,14 @@ def infer_on_stream(args, client):
     # Handle the input stream
 
     # Check for image input
-    if args.input.endswith('.jpg') or args.input.endswith('.bmp'):
+    if args.input.endswith('.jpg') or args.input.endswith('.bmp') :
         single_image_mode = True
         input_stream = args.input
 
-    else:  # input is a video path
+    elif args.input == 'CAM':
+        input_stream = 0
+
+    else: # input is a video path
         input_stream = args.input
         assert os.path.isfile(args.input), "Specified input file doesn't exist"
 
@@ -142,6 +146,7 @@ def infer_on_stream(args, client):
     if not cap.isOpened():
         log.error("ERROR! Unable to open video source")
 
+    global initial_w, initial_h
     initial_w = cap.get(3)
     initial_h = cap.get(4)
 
@@ -150,6 +155,7 @@ def infer_on_stream(args, client):
     while cap.isOpened():
         # Read from the video capture
         flag, frame = cap.read()
+
         if not flag:
             break
 
@@ -161,15 +167,25 @@ def infer_on_stream(args, client):
         image = image.reshape((n, c, h, w))
         # Start asynchronous inference for specified request
         inf_start = time.time()
-
         infer_network.exec_net(request_id, image)
         # Wait for the result
         if infer_network.wait(request_id) == 0:
             det_time = time.time() - inf_start
             # Get the results of the inference request
-            result = infer_network.get_output(cur_request_id)
+            result = infer_network.get_output(request_id)
+
+            inf_time_message = "Inference time: {:.3f}ms" \
+                .format(det_time * 1000)
+
             # Extract any desired stats from the results
             frame, current_count = frame_out(frame, result)
+            cv2.putText(frame, "Current count number {} ".format(current_count),
+                        (20, 25),
+                        cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 255, 0), 1)
+            cv2.putText(frame, inf_time_message, (20, 50),
+                        cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 255, 0), 1)
+
+
             # Calculate and send relevant information on
             if current_count > last_count:
                 start_time = time.time()
@@ -177,6 +193,7 @@ def infer_on_stream(args, client):
                 total_count = total_count + current_count - last_count
                 # Topic "person": keys of "count" and "total" ###
                 client.publish("person", json.dumps({"total": total_count}))
+
 
             # Topic "person/duration": key of "duration"
             if current_count < last_count:
@@ -202,22 +219,6 @@ def infer_on_stream(args, client):
     cap.release()
     cv2.destroyAllWindows()
     client.disconnect()
-    infer_network.clean()
-
-
-def main():
-    """
-    Load the network and parse the output.
-
-    :return: None
-    """
-    # Grab command line args
-    args = build_argparser().parse_args()
-    # Connect to the MQTT server
-    client = connect_mqtt()
-    # Perform inference on the input stream
-    infer_on_stream(args, client)
-
 
 def main():
     """
@@ -235,3 +236,13 @@ def main():
 
 if __name__ == '__main__':
     main()
+    exit(0)
+
+# model link :
+# 1 - resources/FP32/mobilenet-ssd.xml
+
+#/opt/intel/openvino/deployment_tools/model_optimizer# python3 mo_tf.py  --input_model /home/workspace/resources/ssd_mobilenet_v2_coco_2018_03_29/frozen_inference_graph.pb  --tensorflow_use_custom_operations_config extensions/front/tf/ssd_v2_support.json --tensorflow_object_detection_api_pipeline_config /home/workspace/resources/ssd_mobilenet_v2_coco_2018_03_29/pipeline.config --reverse_input_channels  -o /home/workspace/resources/
+
+#python main.py -i resources/Pedestrian_Detect_2_1_1.mp4 -m /home/workspace/resources/frozen_inference_graph.xml  -l /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so -d CPU -pt 0.6 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -framerate 24 -i - http://0.0.0.0:3004/fac.ffm
+
+#-l --block-size=MB
